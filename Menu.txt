@@ -1,0 +1,124 @@
+4
+Breakfast
+images/breakfast.jpeg
+8
+Pho 
+300, 15, 5, 30
+images/pho.jpeg
+Banh Mi Thit
+400, 18, 12, 40
+images/banh_mi.jpeg
+Xoi Thit
+550, 20, 10, 70
+images/xoi_thit.jpeg
+Banh Cuon
+200, 8, 5, 30
+images/banh_cuon.jpeg
+Trung Vit Lon 
+150, 8, 10, 5
+images/trung_vit_lon.jpeg
+Xoi Trang
+300, 8, 10, 40
+images/xoi_trang.jpeg
+Mi Xao Bo
+550, 30, 15, 70
+images/mi_xao.jpeg
+Bun Bo Hue
+550, 30, 15, 60
+images/bun_bo_hue.jpeg
+Side Dish
+images/slide_dish.jpeg
+7
+Salad Rau
+150, 3, 5, 10
+images/salad.jpg
+Nem Ran
+220, 10, 5, 20
+images/nem_ran.jpeg
+Goi Cuon 
+100, 5, 2, 15
+images/goi_cuon.jpeg
+Sup chay
+150, 5, 3, 20
+images/sup_chay.jpeg
+Nom
+250, 20, 8, 10
+images/nom.jpeg
+Banh Xeo
+400, 15, 15, 50
+images/banh_xeo.jpeg
+Banh Bot loc 
+250, 8, 5, 35
+images/banh_bot_loc.jpeg
+Main Dish
+images/Main_dish.jpeg
+16
+Rau Xao
+150, 3, 10, 10
+images/rau_muong_xao.jpeg
+Bo Xao
+600, 35, 20, 60
+images/bo_xao.jpeg
+Ca Kho 
+450, 25, 8, 45
+images/ca_kho.jpeg
+Chao Thit
+250, 15, 5, 25
+images/chao_thit.jpeg
+Bun Rieu
+500, 22, 12, 60
+images/bun_rieu.jpeg
+Ca Ran
+400, 25, 15, 20
+images/ca_ran.jpeg
+Ga Nuong
+350, 30, 12, 10
+images/ga_nuong.jpeg
+Bun Cha
+550, 28, 15, 50
+images/bun_cha.jpeg
+Bun Dau Mam Tom  
+500, 20, 18, 45
+images/bun_dau_mam_tom.jpeg
+Ga luoc
+300, 30, 8, 5
+images/ga_luoc.jpeg
+Cha ca/Thit
+450, 25, 15, 30
+images/cha.jpeg
+Cha la lot  
+350, 20, 15, 20
+images/cha_la_lot.jpeg
+Mien Ga
+400, 15, 8, 50
+images/mien_ga.jpeg
+Kho Qua Nhoi Thit 
+350, 20, 10, 15
+images/kho_qua_nhoi_thit.jpeg
+Trung Ran
+200, 10, 15, 5
+images/trung_ran.jpeg
+Vit Quay
+600, 40, 25, 10
+images/vit_quay.jpeg
+Dessert
+images/dessert.jpeg
+6
+Tao Pho
+100, 3, 2, 15
+images/tao_pho.jpeg
+Che
+300, 5, 10, 45
+images/che.jpeg
+Banh Trang Tron
+250, 8, 5, 30
+images/banh_trang_tron.jpeg
+Tra Sua
+350, 5, 10, 55
+images/tra_sua.jpeg
+Bia  
+150, 1, 0, 10
+images/bia.jpg
+Nuoc Ngot
+140, 0, 0, 35
+images/nuoc_ngot.jpeg

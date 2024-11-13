@@ -1,0 +1,232 @@
+require 'gosu'
+
+SCREEN_W = 800
+SCREEN_H = 600
+X_LOCATION = 300
+
+module ZOrder
+  BACKGROUND, MENU, ITEM, UI = *0..3
+end
+
+class Dimension
+  attr_accessor :leftX, :topY, :rightX, :bottomY
+  def initialize(leftX, topY, rightX, bottomY)
+    @leftX = leftX
+    @topY = topY
+    @rightX = rightX
+    @bottomY = bottomY
+  end
+end
+
+class Menu
+  attr_accessor :name, :image, :meals, :dim
+  def initialize(name, image, meals, dim)
+    @name = name
+    @image = Gosu::Image.new(image)
+    @meals = meals
+    @dim = dim
+  end
+end
+
+class Meal
+  attr_accessor :name, :calories, :carbs, :fat, :protein, :image, :dim
+  def initialize(name, calories, carbs, fat, protein, image, dim)
+    @name = name
+    @calories = calories
+    @carbs = carbs
+    @fat = fat
+    @protein = protein
+    @image = Gosu::Image.new(image)
+    @dim = dim
+  end
+end
+
+class MealTracker < Gosu::Window
+  def initialize
+    super SCREEN_W, SCREEN_H
+    self.caption = "Meal Tracker"
+    @font = Gosu::Font.new(20)
+    @menus = read_menus()
+    @current_menu = nil
+    @selected_meals = []
+    @total_calories = 0
+
+    # Turn_back_button
+    @turn_back_button = Gosu::Image.new("E:/gosu/Custom_Project/images/turn_back_button.png") 
+    scaled_width = 612 * 0.15
+    scaled_height = 408 * 0.15
+    @turn_back_button_dim = Dimension.new(700, 440, 680 + scaled_width, 420 + scaled_height)
+
+    # Continue button
+    @continue_button_image = Gosu::Image.new('E:/gosu/Custom_Project/continue_button.png')
+    scaled_width = 499 * 0.15
+    scaled_height = 499 * 0.15
+    @continue_button_image_dim = Dimension.new(700, 500, 680 + scaled_width, 480 + scaled_height)
+  end
+
+  def read_menus
+    file = File.new("Menu.txt", "r")
+    count = file.gets.chomp.to_i
+    menus = []
+
+    count.times do |i|
+      menu_name = file.gets.chomp
+      menu_image = file.gets.chomp
+      meal_count = file.gets.chomp.to_i
+      meals = []
+
+      meal_count.times do
+        meal_name = file.gets.chomp
+        calories, carbs, fat, protein = file.gets.chomp.split(', ').map(&:to_i)
+        meal_image = file.gets.chomp
+        dim = Dimension.new(0, 0, 0, 0) # Placeholder, will calculate later
+        meals << Meal.new(meal_name, calories, carbs, fat, protein, meal_image, dim)
+      end
+
+      # Adjust menu image positions
+      x_pos = i.even? ? 50 : 450
+      y_pos = 200 * (i / 2) + 50
+      dim = Dimension.new(x_pos, y_pos, x_pos + 150, y_pos + 100)
+      menus << Menu.new(menu_name, menu_image, meals, dim)
+    end
+
+    file.close
+    menus
+  end
+
+  def draw_menus
+    @menus.each do |menu|
+      menu.image.draw(menu.dim.leftX, menu.dim.topY, ZOrder::MENU, 0.8, 0.8)
+      @font.draw_text(menu.name, menu.dim.leftX, menu.dim.topY - 20, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+    end
+  end
+
+  def draw_meals(menu)
+    if menu.name == "Main Dish"
+      columns = 4
+      spacing_x = SCREEN_W / columns
+      spacing_y = (SCREEN_H - 80) / (menu.meals.length / columns + 1)
+      menu.meals.each_with_index do |meal, index|
+        col = index % columns
+        row = index / columns
+
+        meal_x = 20 + (col * spacing_x)
+        meal_y = 20 + (row * spacing_y)
+        meal.image.draw(meal_x, meal_y, ZOrder::ITEM, 0.4, 0.4)
+        meal.dim = Dimension.new(meal_x, meal_y, meal_x + 100, meal_y + 80) # Set clickable area for the meal
+
+        # Draw meal name centered below the image
+        text_x = meal_x + 2 # Centered under the image
+        text_y = meal_y + 74 # Positioned directly below the scale image
+        @font.draw_text(meal.name, text_x, text_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+      end
+    else
+      # Layout for other menus
+      columns = 4
+      spacing_x = SCREEN_W / columns
+      spacing_y = 160
+      menu.meals.each_with_index do |meal, index|
+        col = index % columns
+        row = index / columns
+
+        meal_x = 20 + (col * spacing_x)
+        meal_y = 40 + (row * spacing_y)
+
+        meal.image.draw(meal_x, meal_y, ZOrder::ITEM, 0.5, 0.5)
+        meal.dim = Dimension.new(meal_x, meal_y, meal_x + 100, meal_y + 80)
+
+        # Draw meal name centered below the image
+        text_x = meal_x + 2  # Centered under the image
+        text_y = meal_y + 98  # Positioned below the scaled image
+        @font.draw_text(meal.name, text_x, text_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+      end
+    end
+  end
+
+  def draw_selected_meal_info
+    @selected_meals.each_with_index do |meal, index|
+      info_y = 450 + 20 * index
+      @font.draw_text("#{meal.name} - Calories: #{meal.calories}, Carbs: #{meal.carbs}, Fat: #{meal.fat}, Protein: #{meal.protein}",
+                      100, info_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+    end
+    
+    @font.draw_text("Total Calories: #{@total_calories}", 50, 550, ZOrder::UI, 1.2, 1.2, Gosu::Color::BLACK)
+  end
+
+  def draw_summary
+    # Display summary of selected meals and total calories
+    @font.draw_text("Summary of eaten Meals:", 50, 50, ZOrder::UI, 2, 2, Gosu::Color::BLACK)
+    @selected_meals.each_with_index do |meal, index|
+      info_y = 140 + 20 * index
+      @font.draw_text("#{meal.name} - Calories: #{meal.calories}, Carbs: #{meal.carbs}, Fat: #{meal.fat}, Protein: #{meal.protein}",
+                      140, info_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+    end
+    @font.draw_text("Total Calories Consumed: #{@total_calories}", 50, 500, ZOrder::UI, 2, 2, Gosu::Color::BLACK)
+  end
+
+  def draw_background
+    Gosu.draw_rect(0, 0, SCREEN_W, SCREEN_H, Gosu::Color.new(0xFF_CCBFD7), ZOrder::BACKGROUND)
+  end
+
+  def draw
+    draw_background
+    if @show_summary
+      draw_summary
+    elsif @current_menu.nil?
+      draw_menus
+    else
+      draw_meals(@current_menu)
+      draw_selected_meal_info
+    end
+
+    # Draw the Turn_back_button 
+    if @current_menu
+      @turn_back_button.draw(@turn_back_button_dim.leftX, @turn_back_button_dim.topY, ZOrder::UI, 0.15, 0.15)
+    end
+
+    # Draw the Continue_button
+    if @current_menu && !@show_summary
+      @continue_button_image.draw(@continue_button_image_dim.leftX, @continue_button_image_dim.topY, ZOrder::UI, 0.15, 0.15)
+    end
+  end
+
+  def area_clicked?(dim)
+    mouse_x > dim.leftX && mouse_x < dim.rightX && mouse_y > dim.topY && mouse_y < dim.bottomY
+  end
+
+  def button_down(id)
+    if id == Gosu::MsLeft
+      # Check if a menu was clicked
+      if @current_menu.nil?
+        @menus.each do |menu|
+          if area_clicked?(menu.dim)
+            @current_menu = menu
+            break
+          end
+        end
+      elsif @show_summary
+        # Check if the turn_back_button was clicked on the summary screen
+        if area_clicked?(@turn_back_button_dim)
+          @show_summary = false 
+        end
+      else
+        # Check if turn_back_button was clicked on the meals screen
+        if area_clicked?(@turn_back_button_dim)
+          @current_menu = nil # Return to the menu screen
+        elsif area_clicked?(@continue_button_image_dim)
+          @show_summary = true
+        else
+          # Check if a meal was clicked
+          @current_menu.meals.each do |meal|
+            if area_clicked?(meal.dim)
+              @selected_meals << meal
+              @total_calories += meal.calories
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+MealTracker.new.show if __FILE__ == $0

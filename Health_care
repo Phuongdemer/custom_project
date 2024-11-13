@@ -1,0 +1,710 @@
+require 'gosu'
+
+module ZOrder
+  BACKGROUND, MENU, ITEM, UI = *0..3
+end
+# Meal_tracker
+class Dimension
+  attr_accessor :leftX, :topY, :rightX, :bottomY
+  def initialize(leftX, topY, rightX, bottomY)
+    @leftX = leftX
+    @topY = topY
+    @rightX = rightX
+    @bottomY = bottomY
+  end
+end
+
+class Menu
+  attr_accessor :name, :image, :meals, :dim
+  def initialize(name, image, meals, dim)
+    @name = name
+    @image = Gosu::Image.new(image)
+    @meals = meals
+    @dim = dim
+  end
+end
+
+class Meal
+  attr_accessor :name, :calories, :carbs, :fat, :protein, :image, :dim
+  def initialize(name, calories, carbs, fat, protein, image, dim)
+    @name = name
+    @calories = calories
+    @carbs = carbs
+    @fat = fat
+    @protein = protein
+    @image = Gosu::Image.new(image)
+    @dim = dim
+  end
+end
+
+
+# Class to handle the BMI calculation
+class BMICalculator
+  attr_accessor :age, :weight, :height
+  
+  def initialize(age, weight, height)
+    @age = age
+    @weight = weight
+    @height = height
+  end
+
+  def calculate_bmi
+    # Convert height from cm to m
+    height_in_meters = @height.to_f / 100
+    (@weight / (height_in_meters ** 2)).round(2)
+  end
+
+  def bmi_category
+    bmi = calculate_bmi
+    case bmi
+    when 0..18.5
+      "underweight"
+    when 18.5..24.9
+      "normal weight"
+    when 25..29.9
+      "overweight"
+    else
+      "obesity"
+    end
+  end
+end
+
+class TDEECalculator
+  attr_accessor :age, :weight, :height, :gender, :activity_level
+
+  def initialize(age, weight, height, gender, activity_level)
+    @age = age
+    @weight = weight
+    @height = height
+    @gender = gender.downcase
+    @activity_level = activity_level
+  end
+
+  def calculate_bmr
+    if @gender == :male
+      (10 * @weight) + (6.25 * @height) - (5 * @age) + 5
+    elsif @gender == :female
+      (10 * @weight) + (6.25 * @height) - (5 * @age) - 161
+    end 
+  end
+
+  def calculate_tdee
+    bmr = calculate_bmr
+      if @activity_level == :lightly_active
+        (bmr * 1.375).round(2)
+      elsif @activity_level == :moderately_active
+        (bmr * 1.55).round(2)
+      elsif @activity_level == :highly_active
+        (bmr * 1.725).round(2)
+      end
+  end
+end
+    
+
+# Class to create the GUI
+class GameWindow < Gosu::Window
+  def initialize
+    super 800, 600  # Width, Height
+    self.caption = "Health Care Application"
+    @bmi_calculator = nil
+    @tdee_calculator = nil
+    @message = ""
+    @image = nil
+    @activity_level = nil  
+
+    # Load the background image
+    @background_image = Gosu::Image.new('E:/gosu/Custom_Project/Background.png') # Update with image path
+
+    #Load the male icon image
+    @male_image = Gosu::Image.new('E:/gosu/Custom_Project/male_icon.png') # Update with image path
+
+    #Load the female icon image
+    @female_image = Gosu::Image.new('E:/gosu/Custom_Project/female_icon.png') # Update with image path
+
+    # Load the start button image
+    @start_button_image= Gosu::Image.new('E:/gosu/Custom_Project/start_button.png')
+
+    # Load the continue button image
+    @continue_button_image = Gosu::Image.new('E:/gosu/Custom_Project/continue_button.png')
+
+    #Load the BMI's result images
+    @Underweight = Gosu::Image.new('E:/gosu/Custom_Project/Underweight.png')
+    @Normal_weight = Gosu::Image.new('E:/gosu/Custom_Project/Normal.png')
+    @Overweight = Gosu::Image.new('E:/gosu/Custom_Project/Overweight.png')
+    @Obesity = Gosu::Image.new('E:/gosu/Custom_Project/Obese.png')
+    
+    #Load the image for activity level
+    @slightly_active = Gosu::Image.new('E:/gosu/Custom_Project/slightly_active.png')
+    @moderately_active = Gosu::Image.new('E:/gosu/Custom_Project/moderately_active.png')
+    @highly_active = Gosu::Image.new('E:/gosu/Custom_Project/highly_active.png')
+
+    # Set up font
+    @font_large = Gosu::Font.new(48)  # Font size of 48
+
+    # Input box properties for name
+    @input_text = ""
+    @input_box_x = 270
+    @input_box_y = 320
+    @input_box_width = 300
+    @input_box_height = 60
+
+    # Variable to store selected gender
+    @selected_gender = nil   # can be :male or :female
+
+    # Initial state for gender selection
+    @state = :ask_gender
+
+    # Input box properties for age
+    @age_input_text = ""
+    @age_input_box_x = 300
+    @age_input_box_y = 220
+    @age_input_box_width = 200
+    @age_input_box_height = 80
+
+    # Input box properties for weight
+    @weight_input_text = ""
+    @weight_input_box_x = 270
+    @weight_input_box_y = 280
+    @weight_input_width = 300
+    @weight_input_height = 60
+
+    # Input box properties for height
+    @height_input_text = ""
+    @height_input_box_x = 270
+    @height_input_box_y = 280
+    @height_input_width = 300
+    @height_input_height = 60
+
+    # Position for male and female images
+    @male_image_x = 140
+    @male_image_y = 180
+    @female_image_x = 440
+    @female_image_y = 180
+
+    # Position for activity level images
+    @slightly_active_x = 240
+    @slightly_active_y = 180
+    @moderately_active_x = 240
+    @moderately_active_y = 280
+    @highly_active_x = 240
+    @highly_active_y = 380
+
+    # Position for the start button
+    @start_button_x = 280
+    @start_button_y = 380
+    
+    # Position for the continue button
+    @continue_button_x = 320
+    @continue_button_y = 340
+    scaled_width = 499 * 0.15
+    scaled_height = 499 * 0.15
+    @continue_button_image_dim = Dimension.new(700, 500, 680 + scaled_width, 480 + scaled_height)
+
+    # Initial state
+    @state = :input_name    #States: input_name, :ask_age. :ask_weight, :ask_height, :ask_activity_level
+
+    # Mealtracker
+    @font_small = Gosu::Font.new(20)
+    @menus = read_menus()
+    @current_menu = nil
+    @selected_meals = []
+    @total_calories = 0
+
+    # Turn_back_button
+    @turn_back_button = Gosu::Image.new("E:/gosu/Custom_Project/images/turn_back_button.png") 
+    scaled_width = 612 * 0.15
+    scaled_height = 408 * 0.15
+    @turn_back_button_dim = Dimension.new(700, 440, 680 + scaled_width, 420 + scaled_height)
+  end
+
+  def read_menus
+    file = File.new("Menu.txt", "r")
+    count = file.gets.chomp.to_i
+    menus = []
+
+    count.times do |i|
+      menu_name = file.gets.chomp
+      menu_image = file.gets.chomp
+      meal_count = file.gets.chomp.to_i
+      meals = []
+
+      meal_count.times do
+        meal_name = file.gets.chomp
+        calories, carbs, fat, protein = file.gets.chomp.split(', ').map(&:to_i)
+        meal_image = file.gets.chomp
+        dim = Dimension.new(0, 0, 0, 0) # Placeholder, will calculate later
+        meals << Meal.new(meal_name, calories, carbs, fat, protein, meal_image, dim)
+      end
+
+      # Adjust menu image positions
+      x_pos = i.even? ? 50 : 450
+      y_pos = 200 * (i / 2) + 50
+      dim = Dimension.new(x_pos, y_pos, x_pos + 150, y_pos + 100)
+      menus << Menu.new(menu_name, menu_image, meals, dim)
+    end
+
+    file.close
+    menus
+  end
+  
+  #______________________________draw____________________________________
+  def draw_circle(x,y, radius, color, z = 1)
+    segments = 30   # Number of line segments for a smooth circle
+    angle_step = 360.0 / segments
+
+    segments.times do |i|
+      angle1 = i * angle_step
+      angle2 = (i + 1) * angle_step
+      x1 = x + Gosu.offset_x(angle1, radius)
+      y1 = y + Gosu.offset_y(angle1, radius)
+      x2 = x + Gosu.offset_x(angle2, radius)
+      y2 = y + Gosu.offset_y(angle2, radius)
+      Gosu.draw_line(x1, y1, color, x2, y2, color, z)
+    end
+  end
+
+  def draw_menus
+    @menus.each do |menu|
+      menu.image.draw(menu.dim.leftX, menu.dim.topY, ZOrder::MENU, 0.8, 0.8)
+      @font.draw_text(menu.name, menu.dim.leftX, menu.dim.topY - 20, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+    end
+  end
+
+  def draw_meals(menu)
+    if menu.name == "Main Dish"
+      columns = 4
+      spacing_x = SCREEN_W / columns
+      spacing_y = (SCREEN_H - 80) / (menu.meals.length / columns + 1)
+      menu.meals.each_with_index do |meal, index|
+        col = index % columns
+        row = index / columns
+
+        meal_x = 20 + (col * spacing_x)
+        meal_y = 20 + (row * spacing_y)
+        meal.image.draw(meal_x, meal_y, ZOrder::ITEM, 0.4, 0.4)
+        meal.dim = Dimension.new(meal_x, meal_y, meal_x + 100, meal_y + 80) # Set clickable area for the meal
+
+        # Draw meal name centered below the image
+        text_x = meal_x + 2 # Centered under the image
+        text_y = meal_y + 74 # Positioned directly below the scale image
+        @font_small.draw_text(meal.name, text_x, text_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+      end
+    else
+      # Layout for other menus
+      columns = 4
+      spacing_x = SCREEN_W / columns
+      spacing_y = 160
+      menu.meals.each_with_index do |meal, index|
+        col = index % columns
+        row = index / columns
+
+        meal_x = 20 + (col * spacing_x)
+        meal_y = 40 + (row * spacing_y)
+
+        meal.image.draw(meal_x, meal_y, ZOrder::ITEM, 0.5, 0.5)
+        meal.dim = Dimension.new(meal_x, meal_y, meal_x + 100, meal_y + 80)
+
+        # Draw meal name centered below the image
+        text_x = meal_x + 2  # Centered under the image
+        text_y = meal_y + 98  # Positioned below the scaled image
+        @font_small.draw_text(meal.name, text_x, text_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+      end
+    end
+  end
+
+  def draw_selected_meal_info
+    @selected_meals.each_with_index do |meal, index|
+      info_y = 450 + 20 * index
+      @font_small.draw_text("#{meal.name} - Calories: #{meal.calories}, Carbs: #{meal.carbs}, Fat: #{meal.fat}, Protein: #{meal.protein}",
+                      100, info_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+    end
+    
+    @font_small.draw_text("Total Calories: #{@total_calories}", 50, 550, ZOrder::UI, 1.2, 1.2, Gosu::Color::BLACK)
+  end
+
+  def draw_summary
+    # Display summary of selected meals and total calories
+    @font.draw_text("Summary of eaten Meals:", 50, 50, ZOrder::UI, 2, 2, Gosu::Color::BLACK)
+    @selected_meals.each_with_index do |meal, index|
+      info_y = 140 + 20 * index
+      @font_small.draw_text("#{meal.name} - Calories: #{meal.calories}, Carbs: #{meal.carbs}, Fat: #{meal.fat}, Protein: #{meal.protein}",
+                      140, info_y, ZOrder::UI, 1.0, 1.0, Gosu::Color::BLACK)
+    end
+    @font_small.draw_text("Total Calories Consumed: #{@total_calories}", 50, 500, ZOrder::UI, 2, 2, Gosu::Color::BLACK)
+  end
+
+  def draw
+    # Draw the background image
+    scale_x = width.to_f / @background_image.width
+    scale_y = height.to_f / @background_image.height
+    @background_image.draw(0, 0, 0, scale_x, scale_y) # (x, y, z)
+
+    case @state
+    when :input_name
+    # Draw the input_name
+    draw_text("Welcome to Health Care", 200, 160, 10) 
+    draw_text("What is your name?", 240, 240, 10) 
+
+    # Draw input box for name
+    draw_input_box(@input_box_x, @input_box_y, @input_box_width, @input_box_height)
+
+    # Draw the current input text
+    draw_text(@input_text, @input_box_x + 90, @input_box_y + 5, 2)  # Add padding inside the box
+
+    #Draw the start button
+    # Scale down the start button 80% of its original size
+			scale_x = 0.8 # 80% width
+			scale_y = 0.8 # 80% height
+    @start_button_image.draw(@start_button_x, @start_button_y, 1, scale_x, scale_y)
+
+    # ____________________________________ Gender__________________________________________
+    when :ask_gender
+    # Ask gender input
+    draw_text("Please select your gender", 180, 90, 1)
+
+    # Draw male and female images
+      scale_x = 0.47
+      scale_y = 0.47
+    @male_image.draw(@male_image_x, @male_image_y, 1)
+    @female_image.draw(@female_image_x, @female_image_y, 1, scale_x, scale_y)
+
+    # Draw circle around selected gender
+    if @selected_gender == :male 
+      draw_circle(@male_image_x + @male_image.width / 2, @male_image_y + @male_image.height / 2, 120, Gosu::Color::RED)
+    elsif @selected_gender == :female
+      draw_circle(@female_image_x + (@female_image.width * scale_x) / 2, @female_image_y + (@female_image.height * scale_y) / 2, 120, Gosu::Color::RED)
+    end
+
+    # Draw the continue button
+    # Scale down the continue button 40% of its original size
+			scale_x = 0.3 # 30% width
+			scale_y = 0.3 # 30% height
+    @continue_button_image.draw(480, 440, 1, scale_x, scale_y)
+
+
+    # ________________________________Age_______________________________________
+    when :ask_age
+    # Ask the user how old they are
+    draw_text("Hi #{@input_text}, How old are you?", 140,140, 1)
+
+    # Draw input box for age
+    draw_input_box(@age_input_box_x, @age_input_box_y, @age_input_box_width, @age_input_box_height)
+    
+    #Draw the current age input text inside the box
+    draw_text(@age_input_text, @age_input_box_x + 80, @age_input_box_y + 5, 2)
+
+    # Draw the continue button
+    # Scale down the continue button 40% of its original size
+			scale_x = 0.3 # 30% width
+			scale_y = 0.3 # 30% height
+    @continue_button_image.draw(@continue_button_x, @continue_button_y, 1, scale_x, scale_y)
+
+  # _________________________________________Weight__________________________________________
+   when :ask_weight
+    # Ask the user enter the weight
+    draw_text("Well done #{@input_text}", 240, 140, 10)
+    draw_text("Please enter your weight (in Kilograms)!", 38, 200, 10)
+
+    # Draw input box for weight
+    draw_input_box(@weight_input_box_x, @weight_input_box_y, @weight_input_width, @weight_input_height)
+
+    # Draw the current weight input text inside the box
+    draw_text(@weight_input_text, @weight_input_box_x + 120, @weight_input_box_y + 10, 2)
+
+    # Draw the continue button
+    # Scale down the continue button 40% of its original size
+			scale_x = 0.3 # 30% width
+			scale_y = 0.3 # 30% height
+    @continue_button_image.draw(400, 380, 1, scale_x, scale_y)
+
+  #_________________________________________Height_______________________________________________
+   when :ask_height
+    # Ask the user enter the height
+    draw_text("Good Job, We're almost there!!", 140, 120, 10)
+    draw_text("Please enter your height (in centimeter)!", 30, 200, 10)
+
+    # Draw input box for height
+    draw_input_box(@height_input_box_x,@height_input_box_y, @height_input_width, @height_input_height)
+
+    # Draw the current height input text inside the box
+    draw_text(@height_input_text, @height_input_box_x + 120, @height_input_box_y + 5, 2)
+
+    # Draw the continue button
+    # Scale down the continue butte 40% of its original size
+    scale_x = 0.3 # 30% width
+    scale_y = 0.3 # 30% height
+  @continue_button_image.draw(400, 380, 1, scale_x, scale_y)
+
+  #___________________________________BMI Result_______________________________
+   when :show_bmi_result
+    bmi = @bmi_calculator.calculate_bmi
+    draw_text("Your BMI is #{bmi}", 220, 50, 10)
+    
+    # Draw the continue button
+    # Scale down the continue butte 40% of its original size
+    scale_x = 0.3 # 30% width
+    scale_y = 0.3 # 30% height
+  @continue_button_image.draw(600, 220, 1, scale_x, scale_y)
+
+    # display images based on bmi results
+      case @bmi_calculator.bmi_category
+      when "underweight"
+        scale_x = 0.7
+        scale_y = 0.7
+        @Underweight.draw(300, 130, 1, scale_x, scale_y)
+      when "normal weight"
+        scale_x = 0.7
+        scale_y = 0.7
+        @Normal_weight.draw(300, 130, 1, scale_x, scale_y) 
+      when "overweight"
+        scale_x = 0.7
+        scale_y = 0.7
+        @Overweight.draw(300, 130, 1, scale_x, scale_y)
+      when "obesity"
+        scale_x = 0.7
+        scale_y = 0.7
+        @Obesity.draw(300, 130, 1, scale_x, scale_y)
+      end
+ #___________________________________________TDEE result______________________________________
+  when :ask_activity_level
+  draw_text("Please select your activity level:", 100, 80, 1)
+
+  #Draw activity level image
+  scale_x = 0.7
+  scale_y = 0.7
+  @slightly_active.draw(@slightly_active_x, @slightly_active_y, 1, scale_x, scale_y)
+  @moderately_active.draw(@moderately_active_x, @moderately_active_y, 1, scale_x, scale_y)
+  @highly_active.draw(@highly_active_x, @highly_active_y, 1, scale_x, scale_y)
+
+  when :show_tdee_result
+      tdee = @tdee_calculator.calculate_tdee
+      draw_text("You need #{tdee} calories/day", 100, 240, 10) 
+
+    # Draw the continue button
+    # Scale down the continue butte 40% of its original size
+    scale_x = 0.3 # 30% width
+    scale_y = 0.3 # 30% height
+  @continue_button_image.draw(600, 220, 1, scale_x, scale_y)
+
+ #______________________________________Mealtracker_____________________________________________________
+when :Mealtracker
+ if @show_summary
+  draw_summary
+ elsif @current_menu.nil?
+  draw_menus
+ else
+  draw_meals(@current_menu)
+  draw_selected_meal_info
+ end
+
+# Draw the Turn_back_button 
+ if @current_menu
+  @turn_back_button.draw(@turn_back_button_dim.leftX, @turn_back_button_dim.topY, ZOrder::UI, 0.15, 0.15)
+ end
+
+# Draw the Continue_button
+ if @current_menu && !@show_summary
+  @continue_button_image.draw(@continue_button_image_dim.leftX, @continue_button_image_dim.topY, ZOrder::UI, 0.15, 0.15)
+ end
+end
+end
+
+  def draw_text(text, x, y, z)  # Accept parameters for text, x, y, and z
+    @font_large.draw_text(text, x, y, z, 1.0, 1.0, Gosu::Color::BLACK)
+  end
+  
+  def draw_input_box(x, y, width, height)
+    # Draw a rectangle for the input box
+    Gosu.draw_rect(x, y, width, height, Gosu::Color::BLACK, 0)
+    Gosu.draw_rect(x, y, width, height, Gosu::Color::WHITE, 1) # Border
+  end
+
+  #___________________________logic function__________________________________
+
+  def button_down(id)
+    case id
+    when Gosu::KbBackspace
+      # Handle backspace key to remove the last character
+      if @state == :input_name
+        @input_text.chop! if @input_text.length > 0
+      elsif @state == :ask_age
+        @age_input_text.chop! if @age_input_text.length > 0
+      elsif @state == :ask_weight
+        @weight_input_text.chop! if @weight_input_text.length > 0
+      elsif @state == :ask_height
+        @height_input_text.chop! if @height_input_text.length > 0
+      end
+
+    when Gosu::KbReturn
+      # Handle Enter key press
+      if @state == :input_name
+        puts "Name entered: #{@input_text}"
+        @state = :ask_age  # Move to the next state (ask age)
+      elsif @state == :ask_age
+        @age = @age_input_text.to_i   # Convert the age input text to an integer
+        puts "Age entered: #{@age}"
+      elsif @state == :ask_weight
+        @weight = @weight_input_text.to_i
+        puts "Weight entered: #{@weight}"
+      elsif @state == :ask_height
+        @height = @height_input_text.to_i
+        puts "Height entered: #{@height}"
+      elsif @state == :show_bmi_result
+        @bmi_calculator = BMICalculator.new(@age_input_text.to_i, @weight_input_text.to_i, @height_input_text.to_i)
+       # Clear input after displaying the BMIT
+        @input_text = ""  
+        @age_input_text = ""
+        @weight_input_text = ""
+        @height_input_text = ""
+      end
+      
+    when Gosu::MsLeft
+      # Handle mouse click for menu and button navigation
+    if @current_menu.nil?
+      @menus.each do |menu|
+        if area_clicked?(menu.dim)
+          @current_menu = menu
+          break
+        end
+      end
+    elsif @show_summary
+      # Check if the turn_back_button was clicked on the summary screen
+      if area_clicked?(@turn_back_button_dim)
+        @show_summary = false  # Exit summary screen
+      end
+    else
+      # Check if turn_back_button was clicked on the meals screen
+      if area_clicked?(@turn_back_button_dim)
+        @current_menu = nil # Return to the menu screen
+      elsif area_clicked?(@continue_button_image_dim)
+        @show_summary = true
+      else
+        # Handle clicking on meals in the current menu
+        @current_menu.meals.each do |meal|
+          if area_clicked?(meal.dim)
+            @selected_meals << meal
+            @total_calories += meal.calories
+          end
+        end
+      end
+    end
+
+      # Handle mouse click for the button and gender selection
+      handle_mouse_click(mouse_x, mouse_y)
+      handle_gender_selection(mouse_x, mouse_y) if @state == :ask_gender
+    else
+      # Capture alphanumeric input
+      if @state == :input_name
+        if id.between?(Gosu::KbA, Gosu::KbZ)
+          @input_text += (id - Gosu::KbA + 65).chr # Convert to character (A-Z)
+        elsif id == Gosu::KbSpace
+          @input_text += " " # Space character
+        end
+      # Capture numeric input for age
+      elsif @state == :ask_age
+        if id.between?(Gosu::Kb1, Gosu::Kb0)
+          @age_input_text += (id - Gosu::Kb1).to_s # Convert to character (0-9)
+        end
+      # Weight
+      elsif @state == :ask_weight
+        if id.between?(Gosu::Kb1, Gosu::Kb0)
+          @weight_input_text += (id - Gosu::Kb1).to_s # Convert to character (0-9)
+        end
+      # Height
+      elsif @state == :ask_height
+        if id.between?(Gosu::Kb1, Gosu::Kb0)
+          @height_input_text += (id - Gosu::Kb1).to_s # Convert to character (0-9)
+        end
+      end
+    end
+  end
+
+  def handle_mouse_click(mouse_x, mouse_y)
+    if @state == :input_name
+      # Check if the start button was clicked
+      if mouse_over_button?(mouse_x, mouse_y, @start_button_x, @start_button_y, @start_button_image.width, @start_button_image.height)
+        @state = :ask_age  # Move to the next state (ask age)
+      end
+    elsif @state == :ask_age
+      if mouse_over_button?(mouse_x, mouse_y, @continue_button_x, @continue_button_y, @continue_button_image.width, @continue_button_image.height)
+        @state = :ask_gender  # Move to the weight input screen
+      end
+    elsif @state == :ask_gender
+      if mouse_over_button?(mouse_x, mouse_y, 480, 440, @continue_button_image.width, @continue_button_image.height)
+        @state = :ask_weight # Move to the height input screen
+      end
+    elsif @state == :ask_weight
+      if mouse_over_button?(mouse_x, mouse_y, 400, 380, @continue_button_image.width, @continue_button_image.height)
+        @state = :ask_height # Move to the height input screen
+      end
+    elsif @state == :ask_height
+      if mouse_over_button?(mouse_x, mouse_y, 400, 380, @continue_button_image.width, @continue_button_image.height)
+        @bmi_calculator = BMICalculator.new(@age_input_text.to_i, @weight_input_text.to_i, @height_input_text.to_i)
+        @state = :show_bmi_result  # Move to BMI result screen after height input
+      end
+    elsif @state == :show_bmi_result
+      if mouse_over_button?(mouse_x, mouse_y, 600, 220, @continue_button_image.width, @continue_button_image.height)
+        @state = :ask_activity_level
+      end
+    elsif  @state == :ask_activity_level
+      handle_activity_level_selection(mouse_x, mouse_y)
+    elsif @state == :show_tdee_result
+      if mouse_over_button?(mouse_x, mouse_y, 400, 380, @continue_button_image.width, @continue_button_image.height)
+        @state = :Mealtracker
+      end
+    end
+  end
+
+  def handle_gender_selection(mouse_x, mouse_y)
+    # Check if the male image is clicked
+    if mouse_over_button?(mouse_x, mouse_y,@male_image_x, @male_image_y, @male_image.width, @male_image.height)
+      @selected_gender = :male    #Set gender to male
+      puts "Gender selected: Male"
+    end
+
+    # Check if the female image is clicked
+    if mouse_over_button?(mouse_x, mouse_y, @female_image_x, @female_image_y, @female_image.width, @female_image.height)
+     @selected_gender = :female   #Set gender to female
+     puts "Gender selected: Female"
+    end
+  end
+
+  def area_clicked?(dim)
+    mouse_x > dim.leftX && mouse_x < dim.rightX && mouse_y > dim.topY && mouse_y < dim.bottomY
+  end
+
+  def handle_activity_level_selection(mouse_x, mouse_y)
+    # Check if the lightly active is clicked
+    if mouse_over_button?(mouse_x, mouse_y, @slightly_active_x, @slightly_active_y, @slightly_active.width, @slightly_active.height)
+      @selected_activity = :lightly_active
+      puts "Activity level: lightly_active"
+      @tdee_calculator = TDEECalculator.new(@age_input_text.to_i, @weight_input_text.to_i, @height_input_text.to_i, @selected_gender, @selected_activity)
+      @state = :show_tdee_result
+    end
+
+    # Check if the moderately active is clicked
+    if mouse_over_button?(mouse_x, mouse_y, @moderately_active_x, @moderately_active_y, @moderately_active.width, @moderately_active.height)
+      @selected_activity = :moderately_active
+      puts "Activity level: moderate_active"
+      @tdee_calculator = TDEECalculator.new(@age_input_text.to_i, @weight_input_text.to_i, @height_input_text.to_i, @selected_gender, @selected_activity)
+      @state = :show_tdee_result
+    end
+
+    # Check if the highly active is clicked
+    if mouse_over_button?(mouse_x, mouse_y, @highly_active_x, @highly_active_y, @highly_active.width, @highly_active.height)
+      @selected_activity = :highly_active
+      puts "Activity level: highly_active"
+      @tdee_calculator = TDEECalculator.new(@age_input_text.to_i, @weight_input_text.to_i, @height_input_text.to_i, @selected_gender, @selected_activity)
+      @state = :show_tdee_result
+    end
+  end
+
+  # Helper method to check if the mouse is over a button
+  def mouse_over_button?(mouse_x, mouse_y, button_x, button_y, button_width, button_height)
+    mouse_x >= button_x && mouse_x <= button_x + button_width &&
+    mouse_y >= button_y && mouse_y <= button_y + button_height
+  end
+end
+
+window = GameWindow.new
+window.show                                                                                                                                   
